@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
+	"unicode"
 )
 
 /*
@@ -13,7 +16,43 @@ Bencode:
 */
 
 func encodeBencode(data any) (string, error) {
+	switch v:=data.(type) {
+	case string:
+		return fmt.Sprintf("%d:%s", len(v), v), nil
+	case int:
+		return fmt.Sprintf("i%de", v), nil
+	case []any:
+		encodedList := "l"
+		for _, item := range v {
+			encodedItem, err := encodeBencode(item)
+			if err != nil {
+				return "", err
+			}
+			encodedList += encodedItem
+		}
+		encodedList += "e"
+		return encodedList, nil
+	case map[string]any:
+		encodedDict := "d"
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys) // Bencode requires dict to be sorted in lexicographical order.
 
+		for _, key := range keys {
+			encodedKey, _ := encodeBencode(key)
+			encodedValue, err := encodeBencode(v[key])
+			if err != nil {
+				return "", err
+			}
+			encodedDict +=  encodedKey + encodedValue
+		}
+		encodedDict += "e"
+		return encodedDict, nil
+	default:
+		return "", fmt.Errorf("unsupported type for bencode encoding: %T", data)
+	}
 }
 
 func decodeBencode(bencodedString string) (interface{}, int, error) {
