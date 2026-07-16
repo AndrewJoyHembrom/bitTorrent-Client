@@ -2,6 +2,7 @@ package main
 
 import ( 
 	"fmt"
+	"bittorrent-client/internal/bencode"
 )
 
 /*
@@ -16,5 +17,17 @@ Features I would like to add:
 */
 
 func main() {
-	fmt.Println("hello world")
+	data := map[string]any{
+    	"announce": "http://tracker.example.com",
+    	"info": map[string]any{
+        	"name": "example.txt",
+        	"length": 12345,
+		"piece length": 16384,
+        	"pieces": "abcdefgh",
+    	},
+	}
+
+	result, err := bencode.EncodeBencode(data)
+	fmt.Println(result)
+	fmt.Println(err)
 }

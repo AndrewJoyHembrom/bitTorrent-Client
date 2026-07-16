@@ -1,10 +1,9 @@
-package main
+package bencode
 
 import (
 	"fmt"
 	"sort"
-	"strconv"
-	"unicode"
+	"strings"
 )
 
 /*
@@ -15,25 +14,34 @@ Bencode:
 - Dictionaries are encoded as a 'd' followed by a list of alternating keys and their corresponding values followed by an 'e'. For example, d3:cow3:moo4:spam4:eggse corresponds to {'cow':'moo', 'spam':'eggs'} and d4:spam11:a1:bee corresponds to {'spam':['a':'b']}. Keys must be strings and appear in sorted order.
 */
 
-func encodeBencode(data any) (string, error) {
+func EncodeBencode(data any) (string, error) {
 	switch v:=data.(type) {
+
 	case string:
 		return fmt.Sprintf("%d:%s", len(v), v), nil
+
 	case int:
 		return fmt.Sprintf("i%de", v), nil
+
 	case []any:
-		encodedList := "l"
+		var b strings.Builder
+		b.WriteByte('l')
+		
 		for _, item := range v {
-			encodedItem, err := encodeBencode(item)
+			encodedItem, err := EncodeBencode(item)
 			if err != nil {
 				return "", err
 			}
-			encodedList += encodedItem
+			b.WriteString(encodedItem)
 		}
-		encodedList += "e"
-		return encodedList, nil
+
+		b.WriteByte('e')	
+		return b.String(), nil
+
 	case map[string]any:
-		encodedDict := "d"
+		var b strings.Builder
+		b.WriteByte('d')
+
 		keys := make([]string, 0, len(v))
 		for key := range v {
 			keys = append(keys, key)
@@ -41,20 +49,23 @@ func encodeBencode(data any) (string, error) {
 		sort.Strings(keys) // Bencode requires dict to be sorted in lexicographical order.
 
 		for _, key := range keys {
-			encodedKey, _ := encodeBencode(key)
-			encodedValue, err := encodeBencode(v[key])
+			b.WriteString(fmt.Sprintf("%d:%s", len(key), key))
+			encodedValue, err := EncodeBencode(v[key])
 			if err != nil {
 				return "", err
 			}
-			encodedDict +=  encodedKey + encodedValue
+			b.WriteString(encodedValue)
 		}
-		encodedDict += "e"
-		return encodedDict, nil
+
+		b.WriteByte('e')
+		return b.String(), nil
 	default:
 		return "", fmt.Errorf("unsupported type for bencode encoding: %T", data)
 	}
 }
 
+/*
 func decodeBencode(bencodedString string) (interface{}, int, error) {
 
 }
+*/
